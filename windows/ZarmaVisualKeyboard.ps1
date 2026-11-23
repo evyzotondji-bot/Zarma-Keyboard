@@ -12,10 +12,10 @@ function Add-Keys($p, $start, $end) {
         $p.Children.Add($b) | Out-Null
     }
 }
-Add-Keys $win.FindName("R1") 0xE000 0xE009
-Add-Keys $win.FindName("R2") 0xE014 0xE01D
-Add-Keys $win.FindName("R3") 0xE01E 0xE027
-Add-Keys $win.FindName("R4") 0xE033 0xE03C
-Add-Keys $win.FindName("R5") 0xE041 0xE04A
+Add-Keys $win.FindName("R1") 0xE800 0xE809
+Add-Keys $win.FindName("R2") 0xE814 0xE81D
+Add-Keys $win.FindName("R3") 0xE81E 0xE827
+Add-Keys $win.FindName("R4") 0xE833 0xE83C
+Add-Keys $win.FindName("R5") 0xE841 0xE84A
 $win.FindName("BtnTheme").Add_Click({ $script:idx = ($script:idx + 1) % $themes.Count; $win.Background = $themes[$script:idx].Bg })
 $win.ShowDialog() | Out-Null

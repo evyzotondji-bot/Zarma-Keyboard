@@ -13,7 +13,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val zarmaFont = Typeface.createFromAsset(assets, "fonts/ZarmaEldas.ttf")
         val scroll = ScrollView(this); val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 48, 40, 48) }
-        root.addView(TextView(this).apply { text = "Clavier Zarma Pro v2.0 (ELDAS)"; textSize = 22f; setTypeface(null, Typeface.BOLD) })
+        root.addView(TextView(this).apply { text = "Clavier Zarma Pro v2.1 (ELDAS)"; textSize = 22f; setTypeface(null, Typeface.BOLD) })
         root.addView(Button(this).apply { text = "1. Activer dans Paramètres Android"; setOnClickListener { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) } })
         root.addView(Button(this).apply { text = "2. Sélectionner Clavier Zarma Pro"; setOnClickListener { (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() } })
         val testBox = EditText(this).apply { hint = "Tapez ici en Zarma..."; typeface = zarmaFont; textSize = 26f; minLines = 2 }

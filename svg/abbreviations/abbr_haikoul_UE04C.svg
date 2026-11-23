@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-  <circle cx="500" cy="500" r="92.0" fill="none" stroke="currentColor" stroke-width="76"/>
-  <polygon points="330,176 490,376 430,424 270,224" fill="currentColor"/>
-  <polygon points="730,224 570,424 510,376 670,176" fill="currentColor"/>
-  <polygon points="270,776 430,576 490,624 330,824" fill="currentColor"/>
-  <polygon points="670,824 510,624 570,576 730,776" fill="currentColor"/>
-</svg>

@@ -16,23 +16,24 @@ class ZarmaIMEService : InputMethodService() {
     private lateinit var zarmaFont: Typeface
     private lateinit var rootLayout: LinearLayout
     private lateinit var suggestionRow: LinearLayout
+    private lateinit var livePreviewTv: TextView
     private var previewPopup: PopupWindow? = null
     private lateinit var previewTv: TextView
     private var isShift = false
     private var mode = 0
     private val repeatHandler = Handler(Looper.getMainLooper())
 
-    private val row1Lower = listOf(Pair("\uE000","\uE034"), Pair("\uE024","\uE035"), Pair("\uE003","\uE036"), Pair("\uE01F","\uE037"), Pair("\uE021","\uE038"), Pair("\uE023","\uE039"), Pair("\uE004","\uE03A"), Pair("\uE001","\uE03B"), Pair("\uE002","\uE03C"), Pair("\uE01E","\uE033"))
-    private val row2Lower = listOf("\uE005","\uE020","\uE015","\uE016","\uE017","\uE018","\uE019","\uE01A","\uE01B","\uE01C")
-    private val row3Lower = listOf("\uE022","\uE006","\uE007","\uE008","\uE009","\uE014","\uE01D")
-    private val row1Upper = listOf(Pair("\uE00A","\uE034"), Pair("\uE02A","\uE035"), Pair("\uE00D","\uE036"), Pair("\uE025","\uE037"), Pair("\uE027","\uE038"), Pair("\uE026","\uE039"), Pair("\uE00E","\uE03A"), Pair("\uE00B","\uE03B"), Pair("\uE00C","\uE03C"), Pair("\uE028","\uE033"))
-    private val row2Upper = listOf("\uE00F","\uE029","\uE015","\uE016","\uE017","\uE018","\uE019","\uE01A","\uE01B","\uE01C")
-    private val row3Upper = listOf("\uE022","\uE010","\uE011","\uE012","\uE013","\uE014","\uE01D")
-    private val symRow1 = listOf("\uE034","\uE035","\uE036","\uE037","\uE038","\uE039","\uE03A","\uE03B","\uE03C","\uE033")
-    private val symRow2 = listOf("\uE03D","\uE03E","\uE03F","\uE040","\uE02B","\uE02C","\uE02D","\uE02E","\uE02F")
-    private val symRow3 = listOf("\uE030","\uE031","\uE032","\uE041","\uE042","\uE043","\uE044","\uE045")
-    private val abbrRow1 = listOf("\uE041","\uE046","\uE047","\uE048","\uE045","\uE044","\uE049")
-    private val abbrRow2 = listOf("\uE04A","\uE042","\uE04B","\uE04C","\uE043","\uE04D","\uE04E","\uE04F")
+    private val row1Lower = listOf(Pair("\uE800","\uE834"), Pair("\uE824","\uE835"), Pair("\uE803","\uE836"), Pair("\uE81F","\uE837"), Pair("\uE821","\uE838"), Pair("\uE823","\uE839"), Pair("\uE804","\uE83A"), Pair("\uE801","\uE83B"), Pair("\uE802","\uE83C"), Pair("\uE81E","\uE833"))
+    private val row2Lower = listOf("\uE805","\uE820","\uE815","\uE816","\uE817","\uE818","\uE819","\uE81A","\uE81B","\uE81C")
+    private val row3Lower = listOf("\uE822","\uE806","\uE807","\uE808","\uE809","\uE814","\uE81D")
+    private val row1Upper = listOf(Pair("\uE80A","\uE834"), Pair("\uE82A","\uE835"), Pair("\uE80D","\uE836"), Pair("\uE825","\uE837"), Pair("\uE827","\uE838"), Pair("\uE826","\uE839"), Pair("\uE80E","\uE83A"), Pair("\uE80B","\uE83B"), Pair("\uE80C","\uE83C"), Pair("\uE828","\uE833"))
+    private val row2Upper = listOf("\uE80F","\uE829","\uE815","\uE816","\uE817","\uE818","\uE819","\uE81A","\uE81B","\uE81C")
+    private val row3Upper = listOf("\uE822","\uE810","\uE811","\uE812","\uE813","\uE814","\uE81D")
+    private val symRow1 = listOf("\uE834","\uE835","\uE836","\uE837","\uE838","\uE839","\uE83A","\uE83B","\uE83C","\uE833")
+    private val symRow2 = listOf("\uE83D","\uE83E","\uE83F","\uE840","\uE82B","\uE82C","\uE82D","\uE82E","\uE82F")
+    private val symRow3 = listOf("\uE830","\uE831","\uE832","\uE841","\uE842","\uE843","\uE844","\uE845")
+    private val abbrRow1 = listOf("\uE841","\uE846","\uE847","\uE848","\uE845","\uE844","\uE849")
+    private val abbrRow2 = listOf("\uE84A","\uE842","\uE84B","\uE84C","\uE843","\uE84D","\uE84E","\uE84F")
 
     override fun onCreate() {
         super.onCreate()
@@ -58,10 +59,16 @@ class ZarmaIMEService : InputMethodService() {
         previewPopup?.dismiss()
         previewPopup?.showAtLocation(rootLayout, Gravity.NO_GRAVITY, loc[0] + (anchor.width - dp(58)) / 2, (loc[1] - dp(72)).coerceAtLeast(8))
     }
-    private fun commitZarma(txt: String) { currentInputConnection?.commitText(txt, 1); updateSuggestions() }
+    private fun refreshLivePreview() {
+        if (!::livePreviewTv.isInitialized) return
+        val cur = currentInputConnection?.getTextBeforeCursor(120, 0)?.toString().orEmpty()
+        livePreviewTv.text = if (cur.isEmpty()) "\uE814\uE802\uE81F\uE802 \uE82C" else cur
+        livePreviewTv.alpha = if (cur.isEmpty()) 0.55f else 1.0f
+    }
+    private fun commitZarma(txt: String) { currentInputConnection?.commitText(txt, 1); updateSuggestions(); refreshLivePreview() }
     private fun getCurrentWordPrefix(): String {
         val before = currentInputConnection?.getTextBeforeCursor(24, 0)?.toString() ?: return ""
-        return before.takeLastWhile { it != ' ' && it != '\n' && it != '\uE02C' && it != '\uE02D' }
+        return before.takeLastWhile { it != ' ' && it != '\n' && it != '\uE82C' && it != '\uE82D' }
     }
     private fun updateSuggestions() {
         if (!::suggestionRow.isInitialized) return
@@ -86,16 +93,38 @@ class ZarmaIMEService : InputMethodService() {
                 setOnClickListener { feedback(it); onClick() }
             }
             if (iconType != null) btn.addView(ImageView(this).apply { setImageDrawable(VectorIcons.draw(this@ZarmaIMEService, iconType, theme.textColor, 18)) })
-            if (label.isNotEmpty()) btn.addView(TextView(this).apply { text = label; setTextColor(theme.textColor); textSize = 12f; if (label.startsWith("\uE041")) typeface = zarmaFont; setPadding(if (iconType != null) dp(5) else 0, 0, 0, 0) })
+            if (label.isNotEmpty()) btn.addView(TextView(this).apply { text = label; setTextColor(theme.textColor); textSize = 12f; if (label.startsWith("\uE841")) typeface = zarmaFont; setPadding(if (iconType != null) dp(5) else 0, 0, 0, 0) })
             topBar.addView(btn)
         }
-        addToolBtn(if (mode == 2) "ABC" else "\uE041\uE042", null) { mode = if (mode == 2) 0 else 2; renderKeyboard() }
+        addToolBtn(if (mode == 2) "ABC" else "\uE841\uE842", null) { mode = if (mode == 2) 0 else 2; renderKeyboard() }
         addToolBtn("Image", "share_img") { ZarmaImageRenderer.shareTextAsImage(this, currentInputConnection?.getTextBeforeCursor(200, 0)?.toString().orEmpty(), zarmaFont, theme) }
         addToolBtn("Thème", "palette") { ThemeManager.nextTheme(this); renderKeyboard() }
         addToolBtn("", "settings") { startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) }
         rootLayout.addView(topBar)
         suggestionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(4, 0, 4, 6) }
-        rootLayout.addView(suggestionRow); updateSuggestions()
+        val previewBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            background = makeBg(theme.keyColor, 10); setPadding(dp(10), dp(4), dp(6), dp(4))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(4), 0, dp(4), dp(5)) }
+        }
+        livePreviewTv = TextView(this).apply {
+            typeface = zarmaFont; setTextColor(theme.textColor); textSize = 22f; maxLines = 1
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val sendImgBtn = TextView(this).apply {
+            text = "Envoyer"; setTextColor(theme.textColor); textSize = 12f
+            background = makeBg(theme.actionKeyColor, 12); setPadding(dp(10), dp(5), dp(10), dp(5))
+            setOnClickListener {
+                feedback(it)
+                val txt = currentInputConnection?.getTextBeforeCursor(200, 0)?.toString().orEmpty()
+                if (txt.isNotEmpty()) currentInputConnection?.deleteSurroundingText(txt.length, 0)
+                refreshLivePreview()
+                ZarmaImageRenderer.shareTextAsImage(this@ZarmaIMEService, txt, zarmaFont, theme)
+            }
+        }
+        previewBar.addView(livePreviewTv); previewBar.addView(sendImgBtn)
+        rootLayout.addView(previewBar)
+        rootLayout.addView(suggestionRow); updateSuggestions(); refreshLivePreview()
         when (mode) {
             1 -> { rootLayout.addView(buildRow(symRow1, theme, kh)); rootLayout.addView(buildRow(symRow2, theme, kh)); rootLayout.addView(buildRow3(symRow3, theme, kh, false)) }
             2 -> { rootLayout.addView(buildRow(abbrRow1, theme, kh)); rootLayout.addView(buildRow3(abbrRow2, theme, kh, false)) }
@@ -153,10 +182,10 @@ class ZarmaIMEService : InputMethodService() {
         }
         val delBtn = ImageView(this).apply { setImageDrawable(VectorIcons.draw(this@ZarmaIMEService, "backspace", theme.textColor, 22)); scaleType = ImageView.ScaleType.CENTER; background = makeBg(theme.actionKeyColor); layoutParams = LinearLayout.LayoutParams(0, kh, 1.4f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) } }
         var downX = 0f; var swiped = false
-        val repeatRun = object : Runnable { override fun run() { currentInputConnection?.deleteSurroundingText(1, 0); updateSuggestions(); repeatHandler.postDelayed(this, 55) } }
+        val repeatRun = object : Runnable { override fun run() { currentInputConnection?.deleteSurroundingText(1, 0); updateSuggestions(); refreshLivePreview(); repeatHandler.postDelayed(this, 55) } }
         delBtn.setOnTouchListener { v, ev ->
             when (ev.action) {
-                MotionEvent.ACTION_DOWN -> { downX = ev.x; swiped = false; feedback(v); v.alpha = 0.75f; currentInputConnection?.deleteSurroundingText(1, 0); updateSuggestions(); repeatHandler.postDelayed(repeatRun, 420) }
+                MotionEvent.ACTION_DOWN -> { downX = ev.x; swiped = false; feedback(v); v.alpha = 0.75f; currentInputConnection?.deleteSurroundingText(1, 0); updateSuggestions(); refreshLivePreview(); repeatHandler.postDelayed(repeatRun, 420) }
                 MotionEvent.ACTION_MOVE -> { if (downX - ev.x > dp(42)) swiped = true }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     v.alpha = 1f; repeatHandler.removeCallbacks(repeatRun)
@@ -173,10 +202,10 @@ class ZarmaIMEService : InputMethodService() {
 
     private fun buildBottomRow(theme: KeyboardTheme, kh: Int): LinearLayout {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        row.addView(TextView(this).apply { text = if (mode == 1) "\uE000\uE014" else "\uE034\uE035\uE036"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 18f; gravity = Gravity.CENTER; background = makeBg(theme.actionKeyColor, 18); layoutParams = LinearLayout.LayoutParams(0, kh, 1.5f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); mode = if (mode == 1) 0 else 1; renderKeyboard() } })
-        row.addView(TextView(this).apply { text = "\uE02C"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 21f; gravity = Gravity.CENTER; background = makeBg(theme.keyColor); layoutParams = LinearLayout.LayoutParams(0, kh, 1f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); commitZarma("\uE02C") } })
+        row.addView(TextView(this).apply { text = if (mode == 1) "\uE800\uE814" else "\uE834\uE835\uE836"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 18f; gravity = Gravity.CENTER; background = makeBg(theme.actionKeyColor, 18); layoutParams = LinearLayout.LayoutParams(0, kh, 1.5f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); mode = if (mode == 1) 0 else 1; renderKeyboard() } })
+        row.addView(TextView(this).apply { text = "\uE82C"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 21f; gravity = Gravity.CENTER; background = makeBg(theme.keyColor); layoutParams = LinearLayout.LayoutParams(0, kh, 1f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); commitZarma("\uE82C") } })
         row.addView(TextView(this).apply { text = "Zarma"; setTextColor(theme.textColor); textSize = 15f; gravity = Gravity.CENTER; background = makeBg(theme.keyColor, 14); layoutParams = LinearLayout.LayoutParams(0, kh, 3.8f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }; setOnClickListener { feedback(it); commitZarma(" ") } })
-        row.addView(TextView(this).apply { text = "\uE02D"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 21f; gravity = Gravity.CENTER; background = makeBg(theme.keyColor); layoutParams = LinearLayout.LayoutParams(0, kh, 1f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); commitZarma("\uE02D") } })
+        row.addView(TextView(this).apply { text = "\uE82D"; typeface = zarmaFont; setTextColor(theme.textColor); textSize = 21f; gravity = Gravity.CENTER; background = makeBg(theme.keyColor); layoutParams = LinearLayout.LayoutParams(0, kh, 1f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); commitZarma("\uE82D") } })
         row.addView(ImageView(this).apply { setImageDrawable(VectorIcons.draw(this@ZarmaIMEService, "enter", theme.textColor, 22)); scaleType = ImageView.ScaleType.CENTER; background = makeBg(theme.actionKeyColor, 24); layoutParams = LinearLayout.LayoutParams(0, kh, 1.5f).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }; setOnClickListener { feedback(it); commitZarma("\n") } })
         return row
     }

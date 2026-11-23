@@ -6,33 +6,55 @@ class ZarmaCanvas:
     def __init__(self):
         self.contours, self.svg_elements = [], []
 
-    def rect(self, x1, y1, x2, y2):
-        xa, xb, ya, yb = min(x1, x2), max(x1, x2), min(y1, y2), max(y1, y2)
-        self.contours.append([(xa, ya), (xb, ya), (xb, yb), (xa, yb)])
-        self.svg_elements.append(f'<rect x="{xa}" y="{1000-yb}" width="{xb-xa}" height="{yb-ya}" fill="currentColor"/>')
+    def stroke_poly(self, raw_pts, w=66):
+        pts = [raw_pts[0]]
+        for p in raw_pts[1:]:
+            if math.hypot(p[0]-pts[-1][0], p[1]-pts[-1][1]) >= 2.0:
+                pts.append(p)
+        if len(pts) < 2: return
+        hw = w / 2.0
+        left, right = [], []
+        for i, (x, y) in enumerate(pts):
+            dx, dy = (pts[1][0]-x, pts[1][1]-y) if i == 0 else ((x-pts[-2][0], y-pts[-2][1]) if i == len(pts)-1 else (pts[i+1][0]-pts[i-1][0], pts[i+1][1]-pts[i-1][1]))
+            ln = math.hypot(dx, dy) or 1.0
+            nx, ny = -dy / ln * hw, dx / ln * hw
+            left.append((round(x + nx), round(y + ny)))
+            right.append((round(x - nx), round(y - ny)))
+        ex, ey = pts[-1]
+        ae = math.atan2(left[-1][1]-ey, left[-1][0]-ex)
+        ecap = [(round(ex + hw*math.cos(ae - math.pi*k/8)), round(ey + hw*math.sin(ae - math.pi*k/8))) for k in range(1, 8)]
+        sx, sy = pts[0]
+        as_ = math.atan2(right[0][1]-sy, right[0][0]-sx)
+        scap = [(round(sx + hw*math.cos(as_ - math.pi*k/8)), round(sy + hw*math.sin(as_ - math.pi*k/8))) for k in range(1, 8)]
+        poly = left + ecap + list(reversed(right)) + scap
+        clean = [poly[0]]
+        for p in poly[1:]:
+            if p != clean[-1]: clean.append(p)
+        if len(clean) >= 3:
+            self.contours.append(clean)
+            self.svg_elements.append(f'<polygon points="{" ".join(f"{x},{1000-y}" for x,y in clean)}" fill="currentColor"/>')
 
-    def thick_line(self, x1, y1, x2, y2, w=76):
-        dx, dy = x2 - x1, y2 - y1
-        length = math.hypot(dx, dy)
-        if length == 0: return
-        nx, ny = -dy / length * (w / 2), dx / length * (w / 2)
-        pts = [(round(x1+nx), round(y1+ny)), (round(x2+nx), round(y2+ny)), (round(x2-nx), round(y2-ny)), (round(x1-nx), round(y1-ny))]
-        self.contours.append(pts)
-        self.svg_elements.append(f'<polygon points="{" ".join(f"{x},{1000-y}" for x,y in pts)}" fill="currentColor"/>')
+    def line(self, x1, y1, x2, y2, w=66):
+        self.stroke_poly([(x1, y1), (x2, y2)], w)
 
-    def ring(self, cx, cy, r_outer, r_inner=None, segs=36):
-        if r_inner is None: r_inner = max(10, r_outer - 76)
-        outer = [(round(cx + r_outer * math.cos(2*math.pi*i/segs)), round(cy + r_outer * math.sin(2*math.pi*i/segs))) for i in range(segs)]
-        inner = [(round(cx + r_inner * math.cos(2*math.pi*(segs-1-i)/segs)), round(cy + r_inner * math.sin(2*math.pi*(segs-1-i)/segs))) for i in range(segs)]
+    def quad(self, x0, y0, cx, cy, x1, y1, w=66, steps=22):
+        pts = [((1-t)**2*x0 + 2*(1-t)*t*cx + t**2*x1, (1-t)**2*y0 + 2*(1-t)*t*cy + t**2*y1) for t in (i/steps for i in range(steps+1))]
+        self.stroke_poly(pts, w)
+
+    def arc(self, cx, cy, rx, ry, deg0, deg1, w=66, steps=26):
+        pts = [(cx + rx*math.cos(math.radians(deg0 + (deg1-deg0)*i/steps)), cy + ry*math.sin(math.radians(deg0 + (deg1-deg0)*i/steps))) for i in range(steps+1)]
+        self.stroke_poly(pts, w)
+
+    def oval(self, cx, cy, rx, ry, w=64, segs=36):
+        hw = w / 2.0
+        outer = [(round(cx + (rx+hw)*math.cos(2*math.pi*i/segs)), round(cy + (ry+hw)*math.sin(2*math.pi*i/segs))) for i in range(segs)]
+        inner = [(round(cx + max(8, rx-hw)*math.cos(2*math.pi*(segs-1-i)/segs)), round(cy + max(8, ry-hw)*math.sin(2*math.pi*(segs-1-i)/segs))) for i in range(segs)]
         self.contours.extend([outer, inner])
-        self.svg_elements.append(f'<circle cx="{cx}" cy="{1000-cy}" r="{(r_outer+r_inner)/2}" fill="none" stroke="currentColor" stroke-width="{r_outer-r_inner}"/>')
+        self.svg_elements.append(f'<ellipse cx="{cx}" cy="{1000-cy}" rx="{rx}" ry="{ry}" fill="none" stroke="currentColor" stroke-width="{w}"/>')
 
-    def dot(self, cx, cy, r=55):
-        self.contours.append([(round(cx + r * math.cos(2*math.pi*i/24)), round(cy + r * math.sin(2*math.pi*i/24))) for i in range(24)])
+    def dot(self, cx, cy, r=52):
+        self.contours.append([(round(cx + r*math.cos(2*math.pi*i/24)), round(cy + r*math.sin(2*math.pi*i/24))) for i in range(24)])
         self.svg_elements.append(f'<circle cx="{cx}" cy="{1000-cy}" r="{r}" fill="currentColor"/>')
-
-    def u_cup(self, xl, xr, yb, yt, w=76):
-        self.rect(xl, yb, xr, yb+w); self.rect(xl, yt-w, xr, yt); self.rect(xl, yb, xl+w, yt)
 
     def to_svg(self):
         return '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">\n  ' + "\n  ".join(self.svg_elements) + '\n</svg>\n'
@@ -48,99 +70,99 @@ def build_all_glyphs():
     def new(cp, name, cat):
         c = ZarmaCanvas(); G[name] = (cp, cat, c); return c
 
-    # 10 Voyelles minuscules (U+E000 - U+E009)
-    c = new(0xE000, "v_a", "vowels"); c.u_cup(320, 680, 380, 740); c.rect(320, 200, 680, 276)
-    c = new(0xE001, "v_i", "vowels"); c.u_cup(320, 680, 480, 820); c.rect(320, 330, 680, 400); c.rect(320, 190, 680, 260)
-    c = new(0xE002, "v_o", "vowels"); c.u_cup(320, 680, 560, 860); c.rect(320, 430, 680, 495); c.rect(320, 300, 680, 365); c.rect(320, 170, 680, 235)
-    c = new(0xE003, "v_e", "vowels"); c.rect(320, 720, 680, 796); c.u_cup(320, 680, 240, 600)
-    c = new(0xE004, "v_ou", "vowels"); c.rect(320, 770, 680, 835); c.rect(320, 640, 680, 705); c.u_cup(320, 680, 200, 540)
-    c = new(0xE005, "v_ai", "vowels"); c.rect(320, 720, 680, 796); c.ring(500, 410, 185)
-    c = new(0xE006, "v_oi", "vowels"); c.rect(320, 770, 680, 835); c.rect(320, 640, 680, 705); c.ring(500, 380, 175)
-    c = new(0xE007, "v_an", "vowels"); c.ring(500, 570, 185); c.rect(320, 200, 680, 276)
-    c = new(0xE008, "v_in", "vowels"); c.ring(500, 630, 175); c.rect(320, 330, 680, 400); c.rect(320, 190, 680, 260)
-    c = new(0xE009, "v_on", "vowels"); c.ring(500, 680, 160); c.rect(320, 430, 680, 495); c.rect(320, 300, 680, 365); c.rect(320, 170, 680, 235)
+    # 10 Voyelles minuscules curvilignes (U+E800 - U+E809)
+    c = new(0xE800, "v_a", "vowels"); c.arc(540, 560, 175, 175, 85, 275); c.quad(340, 240, 500, 215, 660, 240, 62)
+    c = new(0xE801, "v_i", "vowels"); c.arc(540, 630, 165, 160, 85, 275); c.quad(340, 355, 500, 335, 660, 355, 58); c.quad(340, 220, 500, 200, 660, 220, 58)
+    c = new(0xE802, "v_o", "vowels"); c.arc(540, 690, 155, 145, 85, 275); c.quad(340, 445, 500, 430, 660, 445, 56); c.quad(340, 320, 500, 305, 660, 320, 56); c.quad(340, 195, 500, 180, 660, 195, 56)
+    c = new(0xE803, "v_e", "vowels"); c.quad(340, 760, 500, 785, 660, 760, 62); c.arc(540, 430, 175, 175, 85, 275)
+    c = new(0xE804, "v_ou", "vowels"); c.quad(340, 795, 500, 815, 660, 795, 58); c.quad(340, 665, 500, 685, 660, 665, 58); c.arc(540, 370, 165, 160, 85, 275)
+    c = new(0xE805, "v_ai", "vowels"); c.quad(340, 760, 500, 785, 660, 760, 62); c.oval(500, 420, 165, 165, 62)
+    c = new(0xE806, "v_oi", "vowels"); c.quad(340, 795, 500, 815, 660, 795, 58); c.quad(340, 665, 500, 685, 660, 665, 58); c.oval(500, 380, 155, 155, 58)
+    c = new(0xE807, "v_an", "vowels"); c.oval(500, 580, 165, 165, 62); c.quad(340, 240, 500, 215, 660, 240, 62)
+    c = new(0xE808, "v_in", "vowels"); c.oval(500, 640, 155, 155, 58); c.quad(340, 355, 500, 335, 660, 355, 58); c.quad(340, 220, 500, 200, 660, 220, 58)
+    c = new(0xE809, "v_on", "vowels"); c.oval(500, 690, 145, 145, 56); c.quad(340, 445, 500, 430, 660, 445, 56); c.quad(340, 320, 500, 305, 660, 320, 56); c.quad(340, 195, 500, 180, 660, 195, 56)
 
-    # 10 Voyelles initiales (U+E00A - U+E013)
+    # 10 Voyelles initiales curvilignes (U+E80A - U+E813)
     for idx, (nm, bars) in enumerate([("V_A", 1), ("V_I", 2), ("V_O", 3)]):
-        c = new(0xE00A+idx, nm, "vowels_cap"); c.rect(460, 160, 536, 840); c.rect(460, 764, 660, 840); c.rect(584, 650, 660, 840)
-        for b in range(bars): c.rect(340, 220+b*110, 660, 286+b*110)
+        c = new(0xE80A+idx, nm, "vowels_cap"); c.line(480, 180, 480, 760); c.arc(570, 750, 90, 95, 0, 180)
+        for b in range(bars): c.quad(350, 240+b*110, 500, 220+b*110, 650, 240+b*110, 58)
     for idx, (nm, bars) in enumerate([("V_E", 1), ("V_OU", 2)]):
-        c = new(0xE00D+idx, nm, "vowels_cap"); c.rect(530, 160, 606, 840); c.ring(445, 290, 120)
-        for b in range(bars): c.rect(380, 560+b*115, 680, 626+b*115)
+        c = new(0xE80D+idx, nm, "vowels_cap"); c.line(560, 180, 560, 820); c.oval(460, 290, 100, 105, 60)
+        for b in range(bars): c.quad(380, 575+b*115, 530, 595+b*115, 680, 575+b*115, 58)
     for idx, (nm, bars) in enumerate([("V_AI", 1), ("V_OI", 2)]):
-        c = new(0xE00F+idx, nm, "vowels_cap"); c.rect(530, 160, 606, 840); c.rect(380, 160, 606, 236); c.rect(380, 160, 456, 360)
-        for b in range(bars): c.rect(380, 560+b*115, 680, 626+b*115)
+        c = new(0xE80F+idx, nm, "vowels_cap"); c.line(560, 270, 560, 820); c.arc(470, 275, 90, 95, 180, 360)
+        for b in range(bars): c.quad(380, 575+b*115, 530, 595+b*115, 680, 575+b*115, 58)
     for idx, (nm, bars) in enumerate([("V_AN", 1), ("V_IN", 2), ("V_ON", 3)]):
-        c = new(0xE011+idx, nm, "vowels_cap"); c.rect(530, 160, 606, 840); c.ring(435, 690, 140)
-        for b in range(bars): c.rect(380, 200+b*105, 680, 264+b*105)
+        c = new(0xE811+idx, nm, "vowels_cap"); c.line(560, 180, 560, 820); c.oval(455, 690, 110, 115, 60)
+        for b in range(bars): c.quad(380, 220+b*105, 530, 200+b*105, 680, 220+b*105, 56)
 
-    # 22 Consonnes + V (U+E014 - U+E02A)
-    c = new(0xE014, "c_b", "letters"); c.rect(462, 380, 538, 840); c.rect(280, 360, 720, 436); c.rect(280, 180, 720, 256)
-    c = new(0xE015, "c_d", "letters"); c.rect(260, 180, 740, 256); c.rect(260, 180, 336, 440); c.rect(664, 180, 740, 440); c.rect(462, 180, 538, 840); c.rect(380, 520, 620, 590)
-    c = new(0xE016, "c_f", "letters"); c.rect(300, 180, 376, 560); c.rect(624, 180, 700, 560); c.rect(280, 500, 720, 576); c.thick_line(320, 820, 500, 560); c.thick_line(680, 820, 500, 560)
-    c = new(0xE017, "c_g", "letters"); c.rect(462, 540, 538, 840); c.rect(340, 500, 660, 576); c.thick_line(660, 538, 340, 220); c.rect(340, 180, 680, 256)
-    c = new(0xE018, "c_h", "letters"); c.rect(524, 180, 600, 840); c.rect(340, 764, 600, 840); c.rect(340, 610, 600, 686); c.thick_line(562, 200, 360, 380)
-    c = new(0xE019, "c_j", "letters"); c.rect(584, 180, 660, 840); c.thick_line(620, 820, 340, 580); c.thick_line(340, 580, 620, 440)
-    c = new(0xE01A, "c_k", "letters"); c.rect(420, 180, 496, 840); c.thick_line(458, 820, 300, 640); c.rect(420, 420, 720, 496); c.rect(420, 180, 720, 256)
-    c = new(0xE01B, "c_l", "letters"); c.thick_line(280, 640, 540, 340); c.rect(400, 724, 720, 800); c.thick_line(700, 760, 440, 180)
-    c = new(0xE01C, "c_m", "letters"); c.rect(280, 180, 356, 500); c.rect(644, 180, 720, 500); c.rect(280, 440, 720, 516); c.dot(500, 310, 55); c.rect(462, 480, 538, 840); c.rect(360, 700, 640, 760); c.rect(360, 580, 640, 640)
-    c = new(0xE01D, "c_n", "letters"); c.rect(280, 180, 356, 500); c.rect(644, 180, 720, 500); c.rect(280, 440, 720, 516); c.dot(500, 310, 55); c.rect(462, 480, 538, 840); c.rect(360, 640, 640, 705)
-    c = new(0xE01E, "c_p", "letters"); c.rect(584, 180, 660, 840); c.thick_line(620, 820, 320, 510); c.thick_line(320, 510, 620, 200)
-    c = new(0xE01F, "c_r", "letters"); c.rect(320, 724, 680, 800); c.thick_line(660, 760, 360, 380); c.thick_line(360, 380, 480, 180)
-    c = new(0xE020, "c_s", "letters"); c.rect(462, 520, 538, 840); c.rect(280, 480, 720, 550); c.rect(280, 330, 720, 400); c.rect(280, 180, 720, 250)
-    c = new(0xE021, "c_t", "letters"); c.rect(340, 440, 416, 840); c.rect(584, 180, 660, 580); c.rect(340, 470, 660, 546)
-    c = new(0xE022, "c_w", "letters"); c.rect(260, 180, 740, 256); c.rect(462, 180, 538, 700); c.rect(300, 664, 700, 740); c.ring(370, 610, 95, 35); c.ring(630, 610, 95, 35)
-    c = new(0xE023, "c_y", "letters"); c.rect(584, 180, 660, 840); c.thick_line(620, 820, 340, 460); c.rect(340, 440, 660, 516)
-    c = new(0xE024, "c_z", "letters"); c.thick_line(380, 680, 240, 540); c.thick_line(240, 540, 460, 320); c.thick_line(460, 320, 640, 500); c.thick_line(640, 500, 780, 360); c.thick_line(280, 780, 380, 680)
-    c = new(0xE025, "c_gn", "letters"); [c.rect(x, 180, x+76, 500) for x in (260, 462, 664)]; c.rect(260, 440, 740, 516); c.rect(462, 480, 538, 840); c.rect(360, 640, 640, 705)
-    c = new(0xE026, "c_ch", "letters"); [c.rect(x, 180, x+76, 500) for x in (260, 462, 664)]; c.rect(260, 440, 740, 516); c.rect(462, 480, 538, 840); c.rect(360, 700, 640, 760); c.rect(360, 580, 640, 640)
-    c = new(0xE027, "c_tch", "letters"); [c.rect(x, 180, x+76, 500) for x in (260, 462, 664)]; c.rect(260, 440, 740, 516); c.rect(462, 480, 538, 840); c.rect(360, 740, 640, 795); c.rect(360, 640, 640, 695); c.rect(360, 540, 640, 595)
-    c = new(0xE028, "c_dj", "letters"); c.thick_line(380, 680, 240, 540); c.thick_line(240, 540, 460, 320); c.thick_line(460, 320, 640, 500); c.thick_line(640, 500, 780, 360)
-    c = new(0xE029, "c_nw", "letters"); c.thick_line(380, 680, 240, 540); c.thick_line(240, 540, 460, 320); c.thick_line(460, 320, 640, 500); c.thick_line(640, 500, 780, 360); c.dot(420, 550, 52)
-    c = new(0xE02A, "c_v", "letters"); c.thick_line(380, 680, 240, 540); c.thick_line(240, 540, 460, 320); c.thick_line(460, 320, 640, 500); c.thick_line(640, 500, 780, 360); c.thick_line(280, 780, 380, 680); c.dot(420, 550, 52)
+    # 23 Consonnes curvilignes (U+E814 - U+E82A)
+    c = new(0xE814, "c_b", "letters"); c.quad(510, 820, 490, 580, 500, 390); c.quad(300, 395, 500, 355, 700, 395); c.quad(300, 220, 500, 180, 700, 220)
+    c = new(0xE815, "c_d", "letters"); c.arc(500, 410, 230, 215, 185, 355); c.line(500, 195, 500, 820); c.quad(390, 560, 500, 535, 610, 560, 58)
+    c = new(0xE816, "c_f", "letters"); c.arc(500, 360, 195, 195, 0, 180); c.line(305, 190, 305, 360); c.line(695, 190, 695, 360); c.quad(330, 800, 500, 520, 670, 800)
+    c = new(0xE817, "c_g", "letters"); c.line(500, 560, 500, 820); c.quad(340, 540, 500, 580, 640, 530); c.quad(640, 530, 480, 380, 350, 230); c.quad(350, 230, 510, 185, 680, 225)
+    c = new(0xE818, "c_h", "letters"); c.line(560, 220, 560, 820); c.quad(560, 810, 440, 835, 350, 765); c.quad(560, 650, 440, 675, 350, 605); c.quad(560, 220, 460, 240, 370, 360)
+    c = new(0xE819, "c_j", "letters"); c.line(610, 190, 610, 820); c.quad(610, 800, 290, 640, 610, 460)
+    c = new(0xE81A, "c_k", "letters"); c.line(450, 190, 450, 820); c.quad(450, 810, 360, 740, 310, 640); c.quad(450, 470, 740, 460, 690, 320); c.quad(690, 320, 640, 200, 450, 210)
+    c = new(0xE81B, "c_l", "letters"); c.quad(290, 610, 390, 340, 530, 390); c.quad(410, 750, 690, 810, 650, 580); c.quad(650, 580, 560, 360, 440, 195)
+    c = new(0xE81C, "c_m", "letters"); c.arc(500, 340, 195, 175, 0, 180); c.line(305, 190, 305, 340); c.line(695, 190, 695, 340); c.dot(500, 300, 50); c.line(500, 515, 500, 820); c.quad(370, 730, 500, 705, 630, 730, 56); c.quad(370, 610, 500, 585, 630, 610, 56)
+    c = new(0xE81D, "c_n", "letters"); c.arc(500, 340, 195, 175, 0, 180); c.line(305, 190, 305, 340); c.line(695, 190, 695, 340); c.dot(500, 300, 50); c.line(500, 515, 500, 820); c.quad(370, 670, 500, 645, 630, 670, 58)
+    c = new(0xE81E, "c_p", "letters"); c.line(610, 190, 610, 820); c.quad(610, 800, 250, 510, 610, 220)
+    c = new(0xE81F, "c_r", "letters"); c.quad(330, 740, 540, 825, 650, 720); c.quad(650, 720, 540, 540, 380, 410); c.quad(380, 410, 330, 300, 470, 195)
+    c = new(0xE820, "c_s", "letters"); c.line(500, 535, 500, 820); c.quad(300, 520, 500, 485, 700, 520, 58); c.quad(300, 370, 500, 335, 700, 370, 58); c.quad(300, 220, 500, 185, 700, 220, 58)
+    c = new(0xE821, "c_t", "letters"); c.quad(370, 820, 360, 540, 500, 510); c.quad(500, 510, 640, 480, 630, 190); c.quad(340, 520, 500, 495, 660, 520, 58)
+    c = new(0xE822, "c_w", "letters"); c.arc(500, 400, 230, 200, 185, 355); c.line(500, 200, 500, 710); c.quad(310, 705, 500, 735, 690, 705, 58); c.oval(375, 615, 75, 75, 50); c.oval(625, 615, 75, 75, 50)
+    c = new(0xE823, "c_y", "letters"); c.line(610, 190, 610, 820); c.quad(610, 800, 360, 650, 360, 480); c.quad(360, 480, 480, 455, 610, 480)
+    c = new(0xE824, "c_z", "letters"); c.quad(290, 770, 380, 710, 370, 650); c.quad(370, 650, 220, 540, 350, 410); c.quad(350, 410, 470, 300, 560, 430); c.quad(560, 430, 660, 530, 770, 380)
+    c = new(0xE825, "c_gn", "letters"); c.arc(385, 340, 115, 165, 0, 180); c.arc(615, 340, 115, 165, 0, 180); c.line(270, 190, 270, 340); c.line(500, 190, 500, 820); c.line(730, 190, 730, 340); c.quad(370, 670, 500, 645, 630, 670, 58)
+    c = new(0xE826, "c_ch", "letters"); c.arc(385, 340, 115, 165, 0, 180); c.arc(615, 340, 115, 165, 0, 180); c.line(270, 190, 270, 340); c.line(500, 190, 500, 820); c.line(730, 190, 730, 340); c.quad(370, 730, 500, 705, 630, 730, 56); c.quad(370, 610, 500, 585, 630, 610, 56)
+    c = new(0xE827, "c_tch", "letters"); c.arc(385, 340, 115, 165, 0, 180); c.arc(615, 340, 115, 165, 0, 180); c.line(270, 190, 270, 340); c.line(500, 190, 500, 820); c.line(730, 190, 730, 340); c.quad(370, 765, 500, 745, 630, 765, 52); c.quad(370, 665, 500, 645, 630, 665, 52); c.quad(370, 565, 500, 545, 630, 565, 52)
+    c = new(0xE828, "c_dj", "letters"); c.quad(370, 650, 220, 540, 350, 410); c.quad(350, 410, 470, 300, 560, 430); c.quad(560, 430, 660, 530, 770, 380)
+    c = new(0xE829, "c_nw", "letters"); c.quad(370, 650, 220, 540, 350, 410); c.quad(350, 410, 470, 300, 560, 430); c.quad(560, 430, 660, 530, 770, 380); c.dot(410, 545, 48)
+    c = new(0xE82A, "c_v", "letters"); c.quad(290, 770, 380, 710, 370, 650); c.quad(370, 650, 220, 540, 350, 410); c.quad(350, 410, 470, 300, 560, 430); c.quad(560, 430, 660, 530, 770, 380); c.dot(410, 545, 48)
 
-    # 8 Ponctuations (U+E02B - U+E032)
-    c = new(0xE02B, "p_allongement", "punctuation"); c.dot(500, 500, 68)
-    c = new(0xE02C, "p_fin_mot", "punctuation"); c.rect(260, 462, 660, 538); c.rect(620, 240, 696, 760)
-    c = new(0xE02D, "p_point", "punctuation"); c.rect(200, 462, 440, 538); c.rect(300, 380, 366, 620); c.u_cup(440, 720, 360, 640, 70); c.rect(700, 240, 776, 760)
-    c = new(0xE02E, "p_infinitif", "punctuation"); c.rect(200, 462, 440, 538); c.rect(300, 380, 366, 620); c.u_cup(440, 740, 360, 640, 70)
-    c = new(0xE02F, "p_intrus", "punctuation"); c.rect(220, 540, 480, 616); c.rect(440, 440, 720, 516); c.rect(680, 300, 756, 700)
-    c = new(0xE030, "p_interrogation", "punctuation"); c.thick_line(680, 740, 460, 500); c.thick_line(460, 500, 680, 260); c.dot(350, 640, 56); c.dot(350, 360, 56)
-    c = new(0xE031, "p_guillemet", "punctuation"); c.rect(220, 462, 440, 538); c.ring(565, 500, 130); c.rect(695, 240, 771, 760)
-    c = new(0xE032, "p_doute", "punctuation"); c.rect(220, 462, 460, 538); c.rect(320, 380, 386, 620); c.ring(600, 500, 140)
+    # 8 Ponctuations curvilignes (U+E82B - U+E832)
+    c = new(0xE82B, "p_allongement", "punctuation"); c.dot(500, 500, 62)
+    c = new(0xE82C, "p_fin_mot", "punctuation"); c.quad(270, 500, 460, 480, 650, 500); c.line(650, 260, 650, 740)
+    c = new(0xE82D, "p_point", "punctuation"); c.line(210, 500, 430, 500, 58); c.line(320, 390, 320, 610, 58); c.arc(580, 500, 120, 125, 85, 275, 58); c.line(730, 260, 730, 740)
+    c = new(0xE82E, "p_infinitif", "punctuation"); c.line(220, 500, 440, 500, 58); c.line(330, 390, 330, 610, 58); c.arc(600, 500, 130, 130, 85, 275, 58)
+    c = new(0xE82F, "p_intrus", "punctuation"); c.quad(230, 575, 360, 595, 480, 565, 58); c.quad(450, 475, 580, 455, 710, 480, 58); c.line(710, 310, 710, 690)
+    c = new(0xE830, "p_interrogation", "punctuation"); c.quad(660, 730, 440, 500, 660, 270); c.dot(350, 635, 50); c.dot(350, 365, 50)
+    c = new(0xE831, "p_guillemet", "punctuation"); c.line(220, 500, 420, 500, 58); c.oval(555, 500, 115, 115, 58); c.line(730, 260, 730, 740)
+    c = new(0xE832, "p_doute", "punctuation"); c.line(220, 500, 440, 500, 58); c.line(330, 390, 330, 610, 58); c.oval(590, 500, 125, 125, 58)
 
-    # 14 Chiffres/Multiplicateurs (U+E033 - U+E040)
-    c = new(0xE033, "n_0", "numbers"); c.rect(260, 565, 740, 640); c.rect(260, 360, 740, 435); c.thick_line(320, 260, 680, 740)
-    c = new(0xE034, "n_1", "numbers"); c.rect(320, 740, 680, 815); c.rect(462, 180, 538, 640); c.rect(320, 380, 680, 455)
-    c = new(0xE035, "n_2", "numbers"); c.thick_line(320, 780, 680, 360); c.thick_line(680, 780, 320, 360); c.rect(260, 180, 740, 256)
-    c = new(0xE036, "n_3", "numbers"); c.rect(320, 180, 396, 820); c.rect(320, 744, 700, 820); c.rect(320, 462, 700, 538); c.rect(320, 180, 700, 256)
-    c = new(0xE037, "n_4", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.dot(550, 520, 65)
-    c = new(0xE038, "n_5", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.rect(440, 480, 700, 556)
-    c = new(0xE039, "n_6", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.rect(535, 420, 605, 680); c.rect(440, 420, 700, 490)
-    c = new(0xE03A, "n_7", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.thick_line(450, 700, 690, 420, 64); c.thick_line(690, 700, 450, 420, 64)
-    c = new(0xE03B, "n_8", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.rect(450, 420, 515, 720); c.rect(450, 660, 690, 720); c.rect(450, 540, 690, 600); c.rect(450, 420, 690, 480)
-    c = new(0xE03C, "n_9", "numbers"); c.rect(300, 180, 376, 820); c.rect(300, 180, 720, 256); c.rect(450, 420, 515, 720); c.rect(450, 420, 690, 480); c.dot(600, 600, 50)
-    c = new(0xE03D, "m_da", "numbers"); c.ring(500, 700, 130); c.rect(462, 180, 538, 820); c.rect(340, 420, 660, 490); c.rect(320, 180, 680, 250)
-    c = new(0xE03E, "m_zangou", "numbers"); c.rect(340, 180, 416, 820); c.rect(584, 180, 660, 820); c.rect(340, 180, 660, 256); c.rect(240, 380, 760, 456)
-    c = new(0xE03F, "m_zambar", "numbers"); c.rect(340, 180, 416, 820); c.rect(584, 180, 660, 820); c.rect(340, 180, 660, 256); c.rect(240, 520, 760, 590); c.rect(240, 340, 760, 410)
-    c = new(0xE040, "m_hawari", "numbers"); c.rect(340, 180, 416, 820); c.rect(584, 180, 660, 820); c.rect(340, 180, 660, 256); c.rect(240, 620, 760, 685); c.rect(240, 460, 760, 525); c.rect(240, 300, 760, 365)
+    # 14 Chiffres/Multiplicateurs curvilignes (U+E833 - U+E840)
+    c = new(0xE833, "n_0", "numbers"); c.quad(270, 595, 500, 620, 730, 595, 58); c.quad(270, 405, 500, 380, 730, 405, 58); c.quad(340, 260, 500, 500, 660, 740, 60)
+    c = new(0xE834, "n_1", "numbers"); c.quad(330, 770, 500, 800, 670, 770); c.line(500, 200, 500, 630); c.quad(330, 415, 500, 390, 670, 415)
+    c = new(0xE835, "n_2", "numbers"); c.quad(330, 770, 500, 560, 670, 360); c.quad(670, 770, 500, 560, 330, 360); c.quad(270, 215, 500, 185, 730, 215)
+    c = new(0xE836, "n_3", "numbers"); c.line(350, 200, 350, 800); c.quad(350, 795, 540, 815, 680, 775); c.quad(350, 500, 540, 520, 680, 490); c.quad(350, 205, 540, 185, 680, 225)
+    c = new(0xE837, "n_4", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.dot(550, 520, 58)
+    c = new(0xE838, "n_5", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.quad(450, 515, 570, 495, 690, 515, 58)
+    c = new(0xE839, "n_6", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.line(570, 440, 570, 680, 56); c.quad(450, 455, 570, 435, 690, 455, 56)
+    c = new(0xE83A, "n_7", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.line(460, 690, 680, 430, 54); c.line(680, 690, 460, 430, 54)
+    c = new(0xE83B, "n_8", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.line(470, 430, 470, 710, 52); c.quad(470, 705, 580, 720, 680, 695, 50); c.quad(470, 570, 580, 585, 680, 560, 50); c.quad(470, 435, 580, 420, 680, 445, 50)
+    c = new(0xE83C, "n_9", "numbers"); c.line(330, 240, 330, 810); c.arc(410, 245, 80, 65, 180, 270); c.quad(410, 180, 570, 175, 700, 210); c.line(470, 430, 470, 710, 52); c.quad(470, 435, 580, 420, 680, 445, 50); c.dot(600, 600, 48)
+    c = new(0xE83D, "m_da", "numbers"); c.oval(500, 690, 115, 115, 58); c.line(500, 200, 500, 810); c.quad(350, 455, 500, 435, 650, 455, 56); c.quad(330, 215, 500, 190, 670, 215, 58)
+    c = new(0xE83E, "m_zangou", "numbers"); c.line(370, 330, 370, 810); c.line(630, 330, 630, 810); c.arc(500, 330, 130, 130, 180, 360); c.quad(250, 420, 500, 395, 750, 420, 58)
+    c = new(0xE83F, "m_zambar", "numbers"); c.line(370, 330, 370, 810); c.line(630, 330, 630, 810); c.arc(500, 330, 130, 130, 180, 360); c.quad(250, 540, 500, 515, 750, 540, 54); c.quad(250, 390, 500, 365, 750, 390, 54)
+    c = new(0xE840, "m_hawari", "numbers"); c.line(370, 330, 370, 810); c.line(630, 330, 630, 810); c.arc(500, 330, 130, 130, 180, 360); c.quad(250, 630, 500, 610, 750, 630, 50); c.quad(250, 490, 500, 470, 750, 490, 50); c.quad(250, 350, 500, 330, 750, 350, 50)
 
-    # 15 Mots abrégés ELDAS (U+E041 - U+E04F)
-    c = new(0xE041, "abbr_da", "abbreviations"); c.ring(500, 660, 130); c.thick_line(430, 560, 300, 200); c.thick_line(570, 560, 700, 200)
-    c = new(0xE042, "abbr_boro", "abbreviations"); c.ring(500, 680, 140); c.rect(462, 180, 538, 550)
-    c = new(0xE043, "abbr_si", "abbreviations"); c.ring(500, 360, 160); c.rect(462, 180, 538, 820); c.rect(462, 744, 720, 820)
-    c = new(0xE044, "abbr_ga", "abbreviations"); c.rect(280, 724, 720, 800); c.thick_line(400, 724, 280, 200); c.thick_line(600, 724, 720, 200)
-    c = new(0xE045, "abbr_go", "abbreviations"); c.ring(480, 640, 150); c.rect(340, 440, 660, 516); c.thick_line(440, 440, 640, 200)
-    c = new(0xE046, "abbr_ya", "abbreviations"); c.thick_line(300, 780, 500, 460); c.thick_line(700, 780, 500, 460); c.ring(500, 320, 140)
-    c = new(0xE047, "abbr_dey", "abbreviations"); c.rect(320, 340, 396, 780); c.rect(604, 340, 680, 780); c.rect(320, 340, 680, 416); c.rect(240, 540, 760, 616); c.rect(462, 200, 538, 360)
-    c = new(0xE048, "abbr_haya", "abbreviations"); c.ring(340, 500, 140); c.thick_line(480, 720, 760, 280); c.thick_line(760, 720, 480, 280)
-    c = new(0xE049, "abbr_don", "abbreviations"); c.rect(260, 320, 336, 680); c.rect(664, 320, 740, 680); c.rect(260, 320, 740, 396); c.rect(380, 480, 620, 556); c.rect(462, 200, 538, 520)
-    c = new(0xE04A, "abbr_yadine", "abbreviations"); c.rect(462, 180, 538, 820); c.ring(500, 500, 170); c.rect(462, 744, 700, 820); c.rect(300, 180, 538, 256)
-    c = new(0xE04B, "abbr_haifo", "abbreviations"); c.ring(500, 500, 130); c.thick_line(240, 720, 420, 540); c.thick_line(240, 280, 420, 460); c.thick_line(760, 720, 580, 540); c.thick_line(760, 280, 580, 460)
-    c = new(0xE04C, "abbr_haikoul", "abbreviations"); c.ring(500, 500, 130); c.thick_line(300, 800, 460, 600); c.thick_line(700, 800, 540, 600); c.thick_line(300, 200, 460, 400); c.thick_line(700, 200, 540, 400)
-    c = new(0xE04D, "abbr_zanga", "abbreviations"); c.rect(260, 260, 740, 336); c.rect(260, 260, 336, 520); c.rect(664, 260, 740, 520); c.dot(500, 480, 65)
-    c = new(0xE04E, "abbr_kan", "abbreviations"); c.rect(280, 640, 520, 716); c.rect(462, 300, 538, 716); c.rect(462, 300, 720, 376); c.rect(644, 300, 720, 540)
-    c = new(0xE04F, "abbr_ik", "abbreviations"); c.rect(340, 180, 416, 820); c.thick_line(416, 500, 680, 780); c.thick_line(416, 500, 680, 220)
+    # 15 Mots abrégés curvilignes (U+E841 - U+E84F)
+    c = new(0xE841, "abbr_da", "abbreviations"); c.oval(500, 660, 115, 115, 58); c.quad(430, 560, 360, 380, 310, 210); c.quad(570, 560, 640, 380, 690, 210)
+    c = new(0xE842, "abbr_boro", "abbreviations"); c.oval(500, 670, 130, 130, 60); c.line(500, 190, 500, 540)
+    c = new(0xE843, "abbr_si", "abbreviations"); c.oval(500, 360, 145, 145, 60); c.line(500, 190, 500, 740); c.arc(600, 735, 100, 85, 0, 180)
+    c = new(0xE844, "abbr_ga", "abbreviations"); c.quad(290, 750, 500, 785, 710, 750); c.quad(400, 750, 330, 480, 290, 210); c.quad(600, 750, 670, 480, 710, 210)
+    c = new(0xE845, "abbr_go", "abbreviations"); c.oval(480, 640, 135, 135, 58); c.quad(340, 475, 500, 455, 660, 475, 56); c.quad(450, 465, 560, 330, 640, 210)
+    c = new(0xE846, "abbr_ya", "abbreviations"); c.quad(310, 780, 410, 610, 500, 460); c.quad(690, 780, 590, 610, 500, 460); c.oval(500, 325, 130, 130, 58)
+    c = new(0xE847, "abbr_dey", "abbreviations"); c.arc(500, 520, 155, 160, 180, 360); c.line(345, 520, 345, 770); c.line(655, 520, 655, 770); c.quad(250, 575, 500, 555, 750, 575, 56); c.line(500, 200, 500, 360)
+    c = new(0xE848, "abbr_haya", "abbreviations"); c.oval(345, 500, 130, 130, 58); c.quad(490, 720, 620, 500, 750, 280); c.quad(750, 720, 620, 500, 490, 280)
+    c = new(0xE849, "abbr_don", "abbreviations"); c.arc(500, 510, 210, 175, 180, 360); c.line(290, 510, 290, 680); c.line(710, 510, 710, 680); c.quad(380, 520, 500, 500, 620, 520, 56); c.line(500, 200, 500, 510)
+    c = new(0xE84A, "abbr_yadine", "abbreviations"); c.line(500, 260, 500, 740); c.oval(500, 500, 155, 155, 58); c.arc(590, 735, 90, 80, 0, 180); c.arc(410, 265, 90, 80, 180, 360)
+    c = new(0xE84B, "abbr_haifo", "abbreviations"); c.oval(500, 500, 115, 115, 56); c.quad(240, 720, 340, 620, 420, 540, 54); c.quad(240, 280, 340, 380, 420, 460, 54); c.quad(760, 720, 660, 620, 580, 540, 54); c.quad(760, 280, 660, 380, 580, 460, 54)
+    c = new(0xE84C, "abbr_haikoul", "abbreviations"); c.oval(500, 500, 115, 115, 56); c.quad(300, 800, 390, 690, 460, 600, 54); c.quad(700, 800, 610, 690, 540, 600, 54); c.quad(300, 200, 390, 310, 460, 400, 54); c.quad(700, 200, 610, 310, 540, 400, 54)
+    c = new(0xE84D, "abbr_zanga", "abbreviations"); c.arc(500, 470, 220, 190, 185, 355); c.dot(500, 490, 60)
+    c = new(0xE84E, "abbr_kan", "abbreviations"); c.arc(410, 620, 90, 80, 0, 180); c.line(500, 410, 500, 620); c.arc(590, 410, 90, 80, 180, 360)
+    c = new(0xE84F, "abbr_ik", "abbreviations"); c.line(370, 190, 370, 810); c.quad(370, 500, 520, 640, 670, 780); c.quad(370, 500, 520, 360, 670, 220)
     return G
 
 if __name__ == "__main__":
@@ -162,8 +184,8 @@ if __name__ == "__main__":
     metrics = {".notdef": (600, 100), "space": (350, 0)}
     for name in glyphs: metrics[name] = (920, 80)
     fb.setupHorizontalMetrics(metrics); fb.setupHorizontalHeader(ascent=880, descent=-120)
-    fb.setupNameTable({"familyName": "Zarma Eldas", "styleName": "Regular", "uniqueFontIdentifier": "ZarmaEldas-2.0", "fullName": "Zarma Eldas Regular", "version": "Version 2.0", "psName": "ZarmaEldas-Regular"})
+    fb.setupNameTable({"familyName": "Zarma Eldas", "styleName": "Regular", "uniqueFontIdentifier": "ZarmaEldas-2.1", "fullName": "Zarma Eldas Regular", "version": "Version 2.1", "psName": "ZarmaEldas-Regular"})
     fb.setupOS2(sTypoAscender=880, sTypoDescender=-120, usWinAscent=880, usWinDescent=120); fb.setupPost()
     for out in ["font/ZarmaEldas.ttf", "android/app/src/main/assets/fonts/ZarmaEldas.ttf", "windows/ZarmaEldas.ttf"]:
         os.makedirs(os.path.dirname(out), exist_ok=True); fb.save(out)
-    print(f"[OK] {len(glyphs)} SVG + ZarmaEldas.ttf v2.0 générés.")
+    print(f"[OK] {len(glyphs)} SVG curvilignes + ZarmaEldas.ttf v2.1 générés.")

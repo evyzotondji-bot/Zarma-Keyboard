@@ -11,11 +11,11 @@ public class ZarmaHook {
     private static bool _zarmaActive = true;
     private static LowLevelKeyboardProc _proc = HookCallback;
     private static Dictionary<Keys, string> map = new Dictionary<Keys, string>() {
-        {Keys.A, "\uE000"}, {Keys.Z, "\uE024"}, {Keys.E, "\uE003"}, {Keys.R, "\uE01F"}, {Keys.T, "\uE021"},
-        {Keys.Y, "\uE023"}, {Keys.U, "\uE004"}, {Keys.I, "\uE001"}, {Keys.O, "\uE002"}, {Keys.P, "\uE01E"},
-        {Keys.Q, "\uE005"}, {Keys.S, "\uE020"}, {Keys.D, "\uE015"}, {Keys.F, "\uE016"}, {Keys.G, "\uE017"},
-        {Keys.H, "\uE018"}, {Keys.J, "\uE019"}, {Keys.K, "\uE01A"}, {Keys.L, "\uE01B"}, {Keys.M, "\uE01C"},
-        {Keys.W, "\uE022"}, {Keys.X, "\uE006"}, {Keys.C, "\uE007"}, {Keys.V, "\uE02A"}, {Keys.B, "\uE014"}, {Keys.N, "\uE01D"}
+        {Keys.A, "\uE800"}, {Keys.Z, "\uE824"}, {Keys.E, "\uE803"}, {Keys.R, "\uE81F"}, {Keys.T, "\uE821"},
+        {Keys.Y, "\uE823"}, {Keys.U, "\uE804"}, {Keys.I, "\uE801"}, {Keys.O, "\uE802"}, {Keys.P, "\uE81E"},
+        {Keys.Q, "\uE805"}, {Keys.S, "\uE820"}, {Keys.D, "\uE815"}, {Keys.F, "\uE816"}, {Keys.G, "\uE817"},
+        {Keys.H, "\uE818"}, {Keys.J, "\uE819"}, {Keys.K, "\uE81A"}, {Keys.L, "\uE81B"}, {Keys.M, "\uE81C"},
+        {Keys.W, "\uE822"}, {Keys.X, "\uE806"}, {Keys.C, "\uE807"}, {Keys.V, "\uE82A"}, {Keys.B, "\uE814"}, {Keys.N, "\uE81D"}
     };
     public static void Start() {
         _hookID = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, IntPtr.Zero, 0);

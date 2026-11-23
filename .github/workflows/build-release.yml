@@ -1,4 +1,4 @@
-name: Build Zarma Keyboard Pro v2.0
+name: Build Zarma Keyboard Pro v2.1
 on:
   push:
     branches: [ main ]
@@ -16,9 +16,6 @@ jobs:
       - run: |
           pip install fonttools
           python build_zarma_assets.py
-          python build_android_core.py
-          python build_android_ui.py
-          python build_windows_and_ci.py
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -29,15 +26,15 @@ jobs:
       - run: |
           cd android
           gradle assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk ../ZarmaKeyboard-Android-v2.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../ZarmaKeyboard-Android-v2.1.apk
       - run: |
-          zip -r ZarmaKeyboard-Windows-v2.zip windows/ font/ZarmaEldas.ttf LICENSE README.md
-          zip -r ZarmaScript-SVG-Pack-v2.zip svg/ font/ZarmaEldas.ttf LICENSE
+          zip -r ZarmaKeyboard-Windows-v2.1.zip windows/ font/ZarmaEldas.ttf LICENSE README.md
+          zip -r ZarmaScript-SVG-Pack-v2.1.zip svg/ font/ZarmaEldas.ttf LICENSE
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.${{ github.run_number }}
-          name: "Clavier Zarma Pro v2.0.${{ github.run_number }} (Android & Windows)"
+          tag_name: v2.1.${{ github.run_number }}
+          name: "Clavier Zarma Pro v2.1.${{ github.run_number }} (Curviligne)"
           files: |
-            ZarmaKeyboard-Android-v2.apk
-            ZarmaKeyboard-Windows-v2.zip
-            ZarmaScript-SVG-Pack-v2.zip
+            ZarmaKeyboard-Android-v2.1.apk
+            ZarmaKeyboard-Windows-v2.1.zip
+            ZarmaScript-SVG-Pack-v2.1.zip

@@ -11,7 +11,7 @@ import java.io.FileOutputStream
 
 object ZarmaImageRenderer {
     fun shareTextAsImage(context: Context, rawText: String, font: Typeface, theme: KeyboardTheme) {
-        val text = rawText.trim().ifEmpty { "\uE014\uE002\uE01F\uE002 \uE02C" }
+        val text = rawText.trim().ifEmpty { "\uE814\uE802\uE81F\uE802 \uE82C" }
         val width = 1080; val pad = 72
         val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = theme.textColor; textSize = 76f }
         val layout = StaticLayout.Builder.obtain(text, 0, text.length, tp, width - pad * 2).setAlignment(Layout.Alignment.ALIGN_NORMAL).setLineSpacing(16f, 1.15f).build()

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <polygon points="220,471 440,471 451,473 461,479 467,489 469,500 467,511 461,521 451,527 440,529 220,529 209,527 199,521 193,511 191,500 193,489 199,479 209,473" fill="currentColor"/>
+  <polygon points="301,610 301,390 303,379 309,369 319,363 330,361 341,363 351,369 357,379 359,390 359,610 357,621 351,631 341,637 330,639 319,637 309,631 303,621" fill="currentColor"/>
+  <ellipse cx="590" cy="500" rx="125" ry="125" fill="none" stroke="currentColor" stroke-width="58"/>
+</svg>

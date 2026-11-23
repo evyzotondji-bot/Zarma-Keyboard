@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-  <rect x="340" y="180" width="76" height="640" fill="currentColor"/>
-  <rect x="584" y="180" width="76" height="640" fill="currentColor"/>
-  <rect x="340" y="744" width="320" height="76" fill="currentColor"/>
-  <rect x="240" y="544" width="520" height="76" fill="currentColor"/>
-</svg>
