@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect x="320" y="364" width="360" height="76" fill="currentColor"/>
+  <rect x="320" y="140" width="360" height="76" fill="currentColor"/>
+  <rect x="320" y="140" width="76" height="300" fill="currentColor"/>
+  <rect x="320" y="505" width="360" height="65" fill="currentColor"/>
+  <rect x="320" y="635" width="360" height="65" fill="currentColor"/>
+  <rect x="320" y="765" width="360" height="65" fill="currentColor"/>
+</svg>
